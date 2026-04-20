@@ -7,7 +7,7 @@ const API_PREFIX = import.meta.env.VITE_API_PREFIX || ''
 export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('test')
-  const [password, setPassword] = useState('test1234')
+  const [password, setPassword] = useState('Dst@7Kw!9m')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -82,6 +82,14 @@ export default function Login() {
               autoCorrect="off"
               style={inputStyle}
             />
+          </div>
+
+          <div style={{
+            color: '#88aacc', fontSize: 13, textAlign: 'center',
+            marginBottom: 16, lineHeight: 1.7,
+          }}>
+            ID: test &nbsp;|&nbsp; 비밀번호는 입력되어 있습니다<br/>
+            엔터를 누르면 바로 접속됩니다
           </div>
 
           {error && (
