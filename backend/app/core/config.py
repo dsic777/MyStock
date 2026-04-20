@@ -12,8 +12,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # 관리자 계정 초기값
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "mystock1234")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "test")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "test1234")
 
 # 키움 API 모드
 KIWOOM_MODE = os.getenv("KIWOOM_MODE", "mock")  # "mock" or "real"
