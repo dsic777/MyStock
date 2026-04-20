@@ -8,8 +8,9 @@ function PrivateRoute({ children }) {
 }
 
 export default function App() {
+  const base = import.meta.env.BASE_URL || '/'
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={base}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
