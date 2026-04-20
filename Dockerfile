@@ -22,7 +22,7 @@ COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm ci
 
 COPY frontend/ ./frontend/
-RUN cd frontend && npm run build
+RUN cd frontend && VITE_API_PREFIX=/mystock npm run build
 
 # 백엔드 복사
 COPY backend/ ./backend/
