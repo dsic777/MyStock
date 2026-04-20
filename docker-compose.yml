@@ -1,0 +1,19 @@
+services:
+
+  mystock-demo:
+    build: .
+    container_name: mystock-demo
+    env_file:
+      - .env
+    volumes:
+      - mystock_db:/app/backend
+    networks:
+      - portfolio-net
+    restart: unless-stopped
+
+volumes:
+  mystock_db:
+
+networks:
+  portfolio-net:
+    external: true

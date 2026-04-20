@@ -1,0 +1,46 @@
+# 환경변수 (절대 올리지 않음)
+.env
+.env.*
+!.env.example
+
+# Python 가상환경
+myEnv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# DB 파일
+*.db
+*.sqlite3
+
+# React 빌드/패키지
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# Claude 설정
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그
+*.log
+
+# 문서 (README만 공개)
+*.md
+!README.md
+
+# gitignore 자체는 공개
+!.gitignore
+
+# 개인 정보 포함 가능 파일
+*.json.bak
+working/
