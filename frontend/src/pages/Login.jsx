@@ -7,7 +7,7 @@ const API_PREFIX = import.meta.env.VITE_API_PREFIX || ''
 export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('test')
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState('test1234')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
