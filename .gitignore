@@ -44,3 +44,6 @@ Thumbs.db
 # 개인 정보 포함 가능 파일
 *.json.bak
 working/
+
+# Claude 협업 규칙 문서는 공개(싱크 필요)
+!CLAUDE.md
