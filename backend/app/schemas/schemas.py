@@ -82,6 +82,8 @@ class StockResponse(BaseModel):
     eval_amount: int
     profit_loss: int
     profit_rate: float
+    prev_close: int
+    day_change: int
     created_at: datetime
 
     class Config:

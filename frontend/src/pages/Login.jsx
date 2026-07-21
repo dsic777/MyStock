@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setToken } from '../utils/auth'
+import { setToken, API_PREFIX } from '../utils/auth'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -14,7 +14,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_PREFIX}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -60,8 +60,8 @@ export default function Login() {
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: 16 }}>
             <input
-              type="text"
-              placeholder="아이디"
+              type="email"
+              placeholder="이메일"
               value={username}
               onChange={e => setUsername(e.target.value)}
               autoFocus

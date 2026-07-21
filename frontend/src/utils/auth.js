@@ -1,5 +1,5 @@
 const TOKEN_KEY = 'mystock_token'
-const API_PREFIX = import.meta.env.VITE_API_PREFIX || ''
+export const API_PREFIX = import.meta.env.BASE_URL.replace(/\/$/, '')
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY)
 export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token)

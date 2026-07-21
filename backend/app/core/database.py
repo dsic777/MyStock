@@ -5,7 +5,9 @@ import os
 
 # SQLite DB 파일 경로 (backend 폴더 안에 생성)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATABASE_URL = f"sqlite:///{BASE_DIR}/mystock.db"
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+DATABASE_URL = f"sqlite:///{DATA_DIR}/mystock.db"
 
 engine = create_engine(
     DATABASE_URL,

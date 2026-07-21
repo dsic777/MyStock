@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.models.models import Stock, Settings, SellHistory
 from app.schemas.schemas import StockCreate, StockUpdate, StockResponse
 from app.api.auth import get_current_user
-from app.services.price_fetcher import get_current_price
+from app.services.price_fetcher import get_current_price, get_prev_close
 
 router = APIRouter(prefix="/stocks", tags=["종목"], dependencies=[Depends(get_current_user)])
 
@@ -60,6 +60,23 @@ def get_stocks(account_id: int = None, db: Session = Depends(get_db)):
         query = query.filter(Stock.account_id == account_id)
     stocks = query.all()
 
+    # 실시간 시세 갱신 — 종목 수가 적어 조회할 때마다 바로 조회
+    # (get_current_price 1분·get_prev_close 10분 캐시로 과호출 방지)
+    _changed = False
+    for s in stocks:
+        cur = get_current_price(s.code)
+        if cur:
+            s.current_price = cur
+            if cur > s.high_price:
+                s.high_price = cur
+            _changed = True
+        pc = get_prev_close(s.code)
+        if pc:
+            s.prev_close = pc
+            _changed = True
+    if _changed:
+        db.commit()
+
     result = []
     for s in stocks:
         stop_price = calc_stop_price(s, settings)
@@ -81,6 +98,8 @@ def get_stocks(account_id: int = None, db: Session = Depends(get_db)):
             "quantity": s.quantity,
             "high_price": s.high_price,
             "current_price": s.current_price,
+            "prev_close": s.prev_close,
+            "day_change": s.day_change,
             "trailing_rate": applied_rate,
             "sell_mode": s.sell_mode or settings.default_sell_mode,
             "buy_amount": s.buy_price * s.quantity,

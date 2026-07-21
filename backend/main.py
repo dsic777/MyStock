@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.core.database import engine, Base
-from app.api import accounts, stocks, settings, sell_history, auth, alerts, ai, demo
+from app.api import accounts, stocks, settings, sell_history, auth, alerts, ai, demo, market
 from seed import run_seed
 import os
 
@@ -39,6 +39,7 @@ app.include_router(sell_history.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(demo.router, prefix="/api")
+app.include_router(market.router, prefix="/api")
 
 
 @app.get("/health")

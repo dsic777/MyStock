@@ -6,13 +6,13 @@ services:
     env_file:
       - .env
     volumes:
-      - mystock_db:/app/backend
+      - mystock_data:/app/backend/data
     networks:
       - portfolio-net
     restart: unless-stopped
 
 volumes:
-  mystock_db:
+  mystock_data:
 
 networks:
   portfolio-net:

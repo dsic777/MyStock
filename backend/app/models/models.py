@@ -43,6 +43,7 @@ class Stock(Base):
     quantity = Column(Integer, nullable=False)     # 보유수량
     high_price = Column(Integer, default=0)        # 최근 고점가 (트레일링 기준)
     current_price = Column(Integer, default=0)     # 현재가 (마지막 조회값)
+    prev_close = Column(Integer, default=0)        # 전영업일 종가 (전일대비 계산용)
     trailing_rate = Column(Float, nullable=True)   # 개별 트레일링 비율 (NULL이면 기본값 사용)
     sell_mode = Column(String, nullable=True)      # 자동/확인/알림 (NULL이면 기본값)
     is_active = Column(Boolean, default=True)      # 모니터링 여부
@@ -84,6 +85,13 @@ class Stock(Base):
         if self.buy_amount == 0:
             return 0.0
         return round((self.profit_loss / self.buy_amount) * 100, 2)
+
+    @property
+    def day_change(self):
+        """전일대비 손익 = (현재가 - 전영업일 종가) × 수량"""
+        if not self.prev_close:
+            return 0
+        return (self.current_price - self.prev_close) * self.quantity
 
 
 class SellHistory(Base):

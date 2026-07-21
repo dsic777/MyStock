@@ -1,51 +1,72 @@
 """
-yfinance를 이용한 한국 주식 현재가 조회
-- 종목코드(6자리) → {코드}.KS 형식으로 조회
-- 1분 캐시 적용 (중복 호출 방지)
-- 장 마감 후에도 당일 종가 반환
+네이버 금융 실시간 시세 (장중 당일 데이터, 코스피/코스닥 코드로 자동 판별)
+- m.stock.naver.com basic API 에서 현재가 + 전일종가를 한 번에 조회
+- KRX 소스라 증권사 값과 일치. 캐시로 과호출 방지. 실패 시 DEMO_PRICES 폴백.
+- (yfinance는 한국 장중 데이터를 못 줘서 폐기)
 """
-import yfinance as yf
+import json
+import urllib.request
 from datetime import datetime, timedelta
 
-# 캐시: {종목코드: (가격, 조회시각)}
-_cache: dict[str, tuple[int, datetime]] = {}
-_CACHE_TTL = timedelta(minutes=1)
+# 캐시: code -> ((current, prev_close), time)
+_cache: dict[str, tuple[tuple[int, int], datetime]] = {}
+_CACHE_TTL = timedelta(seconds=15)
+
+_HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://m.stock.naver.com/"}
+
+# 네이버 조회 실패 시에만 쓰는 폴백 시세 (직전 스냅샷)
+DEMO_PRICES = {
+    "000660": 1764000,  # SK하이닉스
+    "005490": 302500,   # POSCO홀딩스
+    "005930": 244000,   # 삼성전자
+    "034020": 64800,    # 두산에너빌리티
+    "042700": 222000,   # 한미반도체
+    "058470": 69100,    # 리노공업
+    "086520": 73500,    # 에코프로
+    "196170": 269500,   # 알테오젠
+    "133690": 187360,   # TIGER나스닥100 ISA
+}
+
+
+def _naver_quote(code: str):
+    """네이버에서 (현재가, 전일종가) 반환. 실패 시 None"""
+    url = "https://m.stock.naver.com/api/stock/%s/basic" % code
+    try:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=5) as r:
+            d = json.load(r)
+        cur = int(str(d["closePrice"]).replace(",", ""))
+        diff = int(str(d["compareToPreviousClosePrice"]).replace(",", ""))  # 전일대비(1주, 부호포함)
+        if cur > 0:
+            return cur, cur - diff  # (현재가, 전일종가)
+    except Exception as e:
+        print("[naver 오류] %s: %s" % (code, e))
+    return None
+
+
+def _quote(code: str):
+    now = datetime.now()
+    if code in _cache:
+        v, t = _cache[code]
+        if now - t < _CACHE_TTL:
+            return v
+    q = _naver_quote(code)
+    if q:
+        _cache[code] = (q, now)
+    return q
 
 
 def get_current_price(code: str) -> int:
-    """
-    한국 주식 현재가 조회 (yfinance, 15분 지연)
-    code: 6자리 종목코드 (예: "005930")
-    반환: 현재가 (int), 실패 시 0
-    """
-    now = datetime.now()
+    """현재가 (네이버 실시간). 실패 시 DEMO_PRICES, 없으면 0"""
+    q = _quote(code)
+    if q:
+        return q[0]
+    return DEMO_PRICES.get(code, 0)
 
-    # 캐시 확인
-    if code in _cache:
-        cached_price, cached_at = _cache[code]
-        if now - cached_at < _CACHE_TTL:
-            return cached_price
 
-    symbol = f"{code}.KS"
-    try:
-        ticker = yf.Ticker(symbol)
-        # fast_info로 빠르게 시도
-        price = ticker.fast_info.last_price
-        if price and price > 0:
-            result = int(price)
-            _cache[code] = (result, now)
-            print(f"[yfinance] {code}: {result:,}원")
-            return result
-
-        # 실패 시 history로 재시도
-        hist = ticker.history(period="1d")
-        if not hist.empty:
-            result = int(hist["Close"].iloc[-1])
-            _cache[code] = (result, now)
-            print(f"[yfinance-hist] {code}: {result:,}원")
-            return result
-
-    except Exception as e:
-        print(f"[yfinance 오류] {code}: {e}")
-
+def get_prev_close(code: str) -> int:
+    """전일종가 (네이버, 증권사와 일치). 실패 시 0"""
+    q = _quote(code)
+    if q:
+        return q[1]
     return 0
