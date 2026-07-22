@@ -46,7 +46,7 @@ def _fetch(url: str) -> dict:
 
 def _parse(name: str, d: dict) -> dict:
     close = _num(d.get("closePrice"))
-    comp = _num(d.get("compareToPreviousClosePrice"))  # 절대값
+    comp = abs(_num(d.get("compareToPreviousClosePrice")))  # 해외지수는 부호포함('-146.30')이라 절대값화 후 code로 방향
     code = str((d.get("compareToPreviousPrice") or {}).get("code", ""))
     sign = -1 if code in ("4", "5") else 1
     change = round(comp * sign, 2)
@@ -59,7 +59,7 @@ def _parse_exchange(d: dict) -> dict:
     """환율(USD/KRW) — exchangeInfo 구조 파싱"""
     ei = d.get("exchangeInfo", {})
     close = _num(ei.get("closePrice"))
-    fluc = _num(ei.get("fluctuations"))  # 등락 절대값
+    fluc = abs(_num(ei.get("fluctuations")))  # 부호 유무 무관 절대값화 후 code로 방향
     code = str((ei.get("fluctuationsType") or {}).get("code", ""))
     sign = -1 if code in ("4", "5") else 1
     change = round(fluc * sign, 2)
