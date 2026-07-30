@@ -259,8 +259,8 @@ export default function Dashboard() {
   }
   const summaryGroups = [
     { label: '총 평가손익', bg: '#0d47a1', ...calcStats(stocks) },
-    { label: '일반주손익', bg: '#1565c0', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
-    { label: 'ETF평가손익', bg: '#00838f', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
+    { label: '일반주 평가손익', bg: '#1565c0', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
+    { label: 'ETF 평가손익', bg: '#00838f', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
   ]
 
   return (
