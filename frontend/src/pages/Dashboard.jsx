@@ -110,9 +110,7 @@ function StockCard({ stock, onAnalyze }) {
           <div style={{ fontSize: 14, color: '#444', fontWeight: 600 }}>전일대비</div>
           <div style={{ fontSize: 15, fontWeight: 600, color: dayChangeColor }}>
             {(stock.day_change || 0) >= 0 ? '+' : ''}{fmt(stock.day_change || 0)}원
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: dayChangeColor }}>
-            ({dayRate >= 0 ? '+' : ''}{dayRate.toFixed(2)}%)
+            <span style={{ fontSize: 13, fontWeight: 600, color: dayChangeColor, marginLeft: 4 }}>({dayRate >= 0 ? '+' : ''}{dayRate.toFixed(2)}%)</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -260,12 +258,10 @@ export default function Dashboard() {
     return { buy, evl, dayChange, profit, rate, dayRate }
   }
   const summaryGroups = [
-    { label: '총 평가손익', ...calcStats(stocks) },
-    { label: '일반주손익', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
-    { label: 'ETF평가손익', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
+    { label: '총 평가손익', bg: '#0d47a1', ...calcStats(stocks) },
+    { label: '일반주손익', bg: '#1565c0', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
+    { label: 'ETF평가손익', bg: '#00838f', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
   ]
-  const sellCount = stocks.filter(s => s.status === '매도').length
-  const warnCount = stocks.filter(s => s.status === '주의').length
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 6px 40px' }} onClick={unlockAudio}>
@@ -330,13 +326,13 @@ export default function Dashboard() {
 
       {/* 요약 카드 */}
       <div style={{
-        background: '#1565c0', borderRadius: 12, padding: '14px 18px',
+        background: '#0f2740', borderRadius: 12, padding: 8,
         color: '#fff', marginBottom: 14
       }}>
         {summaryGroups.map((g, i) => (
           <div key={g.label} style={{
-            marginBottom: 8, paddingBottom: 8,
-            borderBottom: i < summaryGroups.length - 1 ? '1px solid rgba(255,255,255,0.25)' : 'none'
+            background: g.bg, borderRadius: 10, padding: '10px 12px',
+            marginBottom: i < summaryGroups.length - 1 ? 8 : 0
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <div>
@@ -349,9 +345,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 12, opacity: 0.8 }}>전일대비</div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>
                   {g.dayChange >= 0 ? '+' : ''}{fmt(g.dayChange)}원
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
-                  ({g.dayRate > 0 ? '+' : ''}{g.dayRate}%)
+                  <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.9, marginLeft: 4 }}>({g.dayRate > 0 ? '+' : ''}{g.dayRate}%)</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -367,12 +361,6 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
-        {(sellCount > 0 || warnCount > 0) && (
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            {sellCount > 0 && <span style={{ background: '#f44336', borderRadius: 6, padding: '2px 10px', fontSize: 13 }}>🔴 매도 {sellCount}종목</span>}
-            {warnCount > 0 && <span style={{ background: '#ff9800', borderRadius: 6, padding: '2px 10px', fontSize: 13 }}>⚠️ 주의 {warnCount}종목</span>}
-          </div>
-        )}
       </div>
 
       {/* 종목 수 / 갱신시간 */}
