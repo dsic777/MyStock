@@ -141,12 +141,12 @@ def update_stock(stock_id: int, data: StockUpdate, db: Session = Depends(get_db)
 
 @router.post("/{stock_id}/sell", response_model=dict)
 def sell_stock_manual(stock_id: int, ai_opinion: str = "", db: Session = Depends(get_db)):
-    """확인 모드 매도 실행 — 매도이력 저장 + 종목 비활성화 + 키움 주문"""
+    """매도 — 매도이력 저장 + 종목 비활성화(리스트에서 제거). 실주문 없음(데모)."""
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if not stock:
         raise HTTPException(status_code=404, detail="종목을 찾을 수 없습니다")
 
-    # 최신 현재가 (yfinance)
+    # 최신 현재가
     current_price = stock.current_price
     price = get_current_price(stock.code)
     if price > 0:
