@@ -7,10 +7,11 @@
 import json
 import urllib.request
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 # 캐시: code -> ((current, prev_close), time)
 _cache: dict[str, tuple[tuple[int, int], datetime]] = {}
-_CACHE_TTL = timedelta(seconds=15)
+_CACHE_TTL = timedelta(seconds=30)
 
 _HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://m.stock.naver.com/"}
 
@@ -54,6 +55,16 @@ def _quote(code: str):
     if q:
         _cache[code] = (q, now)
     return q
+
+
+def prefetch(codes) -> None:
+    """여러 종목 시세를 병렬로 미리 조회해 캐시에 채운다 (순차 호출 병목 제거).
+    이미 캐시에 있는 종목은 _quote 내부에서 네트워크 없이 통과."""
+    uniq = list({c for c in codes if c})
+    if not uniq:
+        return
+    with ThreadPoolExecutor(max_workers=min(10, len(uniq))) as ex:
+        list(ex.map(_quote, uniq))
 
 
 def get_current_price(code: str) -> int:

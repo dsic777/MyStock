@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.models.models import Stock, Settings, SellHistory
 from app.schemas.schemas import StockCreate, StockUpdate, StockResponse
 from app.api.auth import get_current_user
-from app.services.price_fetcher import get_current_price, get_prev_close
+from app.services.price_fetcher import get_current_price, get_prev_close, prefetch
 
 router = APIRouter(prefix="/stocks", tags=["종목"], dependencies=[Depends(get_current_user)])
 
@@ -60,8 +60,8 @@ def get_stocks(account_id: int = None, db: Session = Depends(get_db)):
         query = query.filter(Stock.account_id == account_id)
     stocks = query.all()
 
-    # 실시간 시세 갱신 — 종목 수가 적어 조회할 때마다 바로 조회
-    # (get_current_price 1분·get_prev_close 10분 캐시로 과호출 방지)
+    # 실시간 시세 갱신 — 모든 종목 시세를 병렬로 미리 채운 뒤(캐시 30초) 순차 반영
+    prefetch([s.code for s in stocks])
     _changed = False
     for s in stocks:
         cur = get_current_price(s.code)
