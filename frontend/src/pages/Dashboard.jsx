@@ -248,19 +248,22 @@ export default function Dashboard() {
     fetchStocks()
   }, [])
 
-  // 요약 계산
-  const totalBuy = stocks.reduce((s, x) => s + (x.buy_amount || 0), 0)
-  const totalEval = stocks.reduce((s, x) => s + (x.eval_amount || 0), 0)
-  const totalDayChange = stocks.reduce((s, x) => s + (x.day_change || 0), 0)
-  const totalProfit = totalEval - totalBuy
-  const totalRate = totalBuy ? ((totalProfit / totalBuy) * 100).toFixed(2) : 0
-  const prevTotalEval = totalEval - totalDayChange
-  const totalDayRate = prevTotalEval ? ((totalDayChange / prevTotalEval) * 100).toFixed(2) : 0
-  // 일반주 / ETF 손익 분리
-  const etfProfit = stocks
-    .filter(s => s.stock_type === 'ETF')
-    .reduce((s, x) => s + ((x.eval_amount || 0) - (x.buy_amount || 0)), 0)
-  const normalProfit = totalProfit - etfProfit
+  // 요약 계산 — 총 / 일반주 / ETF 각각 손익·전일대비·수익률·매입·평가
+  const calcStats = (list) => {
+    const buy = list.reduce((s, x) => s + (x.buy_amount || 0), 0)
+    const evl = list.reduce((s, x) => s + (x.eval_amount || 0), 0)
+    const dayChange = list.reduce((s, x) => s + (x.day_change || 0), 0)
+    const profit = evl - buy
+    const rate = buy ? ((profit / buy) * 100).toFixed(2) : 0
+    const prevEval = evl - dayChange
+    const dayRate = prevEval ? ((dayChange / prevEval) * 100).toFixed(2) : 0
+    return { buy, evl, dayChange, profit, rate, dayRate }
+  }
+  const summaryGroups = [
+    { label: '총 평가손익', ...calcStats(stocks) },
+    { label: '일반주손익', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
+    { label: 'ETF평가손익', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
+  ]
   const sellCount = stocks.filter(s => s.status === '매도').length
   const warnCount = stocks.filter(s => s.status === '주의').length
 
@@ -330,37 +333,40 @@ export default function Dashboard() {
         background: '#1565c0', borderRadius: 12, padding: '14px 18px',
         color: '#fff', marginBottom: 14
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>총 평가손익</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>
-              {totalProfit >= 0 ? '+' : ''}{fmt(totalProfit)}원
+        {summaryGroups.map((g, i) => (
+          <div key={g.label} style={{
+            marginBottom: 8, paddingBottom: 8,
+            borderBottom: i < summaryGroups.length - 1 ? '1px solid rgba(255,255,255,0.25)' : 'none'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>{g.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                  {g.profit >= 0 ? '+' : ''}{fmt(g.profit)}원
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>전일대비</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                  {g.dayChange >= 0 ? '+' : ''}{fmt(g.dayChange)}원
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
+                  ({g.dayRate > 0 ? '+' : ''}{g.dayRate}%)
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>수익률</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                  {g.rate > 0 ? '+' : ''}{g.rate}%
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 16, fontWeight: 600 }}>
+              <span>매입 {fmt(g.buy)}원</span>
+              <span>평가 {fmt(g.evl)}원</span>
             </div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>전일대비</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>
-              {totalDayChange >= 0 ? '+' : ''}{fmt(totalDayChange)}원
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
-              ({totalDayRate > 0 ? '+' : ''}{totalDayRate}%)
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>수익률</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>
-              {totalRate > 0 ? '+' : ''}{totalRate}%
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 16, fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
-          <span style={{ opacity: 0.85 }}>일반주손익 {normalProfit >= 0 ? '+' : ''}{fmt(normalProfit)}원</span>
-          <span style={{ opacity: 0.85 }}>ETF평가손익 {etfProfit >= 0 ? '+' : ''}{fmt(etfProfit)}원</span>
-        </div>
-        <div style={{ display: 'flex', gap: 12, fontSize: 16, opacity: 1, fontWeight: 600 }}>
-          <span>매입 {fmt(totalBuy)}원</span>
-          <span>평가 {fmt(totalEval)}원</span>
-        </div>
+        ))}
         {(sellCount > 0 || warnCount > 0) && (
           <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
             {sellCount > 0 && <span style={{ background: '#f44336', borderRadius: 6, padding: '2px 10px', fontSize: 13 }}>🔴 매도 {sellCount}종목</span>}
