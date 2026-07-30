@@ -31,6 +31,8 @@ function StockCard({ stock, onAnalyze }) {
   const profitColor = stock.profit_loss >= 0 ? '#d32f2f' : '#1565c0'
   const buyTotal = stock.buy_price * stock.quantity
   const evalTotal = stock.current_price * stock.quantity
+  const dayChangeColor = (stock.day_change || 0) >= 0 ? '#d32f2f' : '#1565c0'
+  const dayRate = stock.prev_close ? ((stock.current_price - stock.prev_close) / stock.prev_close * 100) : 0
 
   return (
     <div style={{
@@ -106,8 +108,11 @@ function StockCard({ stock, onAnalyze }) {
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 14, color: '#444', fontWeight: 600 }}>전일대비</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: (stock.day_change || 0) >= 0 ? '#d32f2f' : '#1565c0' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: dayChangeColor }}>
             {(stock.day_change || 0) >= 0 ? '+' : ''}{fmt(stock.day_change || 0)}원
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: dayChangeColor }}>
+            ({dayRate >= 0 ? '+' : ''}{dayRate.toFixed(2)}%)
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -249,6 +254,8 @@ export default function Dashboard() {
   const totalDayChange = stocks.reduce((s, x) => s + (x.day_change || 0), 0)
   const totalProfit = totalEval - totalBuy
   const totalRate = totalBuy ? ((totalProfit / totalBuy) * 100).toFixed(2) : 0
+  const prevTotalEval = totalEval - totalDayChange
+  const totalDayRate = prevTotalEval ? ((totalDayChange / prevTotalEval) * 100).toFixed(2) : 0
   const sellCount = stocks.filter(s => s.status === '매도').length
   const warnCount = stocks.filter(s => s.status === '주의').length
 
@@ -329,6 +336,9 @@ export default function Dashboard() {
             <div style={{ fontSize: 12, opacity: 0.8 }}>전일대비</div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>
               {totalDayChange >= 0 ? '+' : ''}{fmt(totalDayChange)}원
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>
+              ({totalDayRate > 0 ? '+' : ''}{totalDayRate}%)
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
