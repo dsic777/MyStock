@@ -256,6 +256,11 @@ export default function Dashboard() {
   const totalRate = totalBuy ? ((totalProfit / totalBuy) * 100).toFixed(2) : 0
   const prevTotalEval = totalEval - totalDayChange
   const totalDayRate = prevTotalEval ? ((totalDayChange / prevTotalEval) * 100).toFixed(2) : 0
+  // 일반주 / ETF 손익 분리
+  const etfProfit = stocks
+    .filter(s => s.stock_type === 'ETF')
+    .reduce((s, x) => s + ((x.eval_amount || 0) - (x.buy_amount || 0)), 0)
+  const normalProfit = totalProfit - etfProfit
   const sellCount = stocks.filter(s => s.status === '매도').length
   const warnCount = stocks.filter(s => s.status === '주의').length
 
@@ -347,6 +352,10 @@ export default function Dashboard() {
               {totalRate > 0 ? '+' : ''}{totalRate}%
             </div>
           </div>
+        </div>
+        <div style={{ display: 'flex', gap: 16, fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+          <span style={{ opacity: 0.85 }}>일반주손익 {normalProfit >= 0 ? '+' : ''}{fmt(normalProfit)}원</span>
+          <span style={{ opacity: 0.85 }}>ETF평가손익 {etfProfit >= 0 ? '+' : ''}{fmt(etfProfit)}원</span>
         </div>
         <div style={{ display: 'flex', gap: 12, fontSize: 16, opacity: 1, fontWeight: 600 }}>
           <span>매입 {fmt(totalBuy)}원</span>
