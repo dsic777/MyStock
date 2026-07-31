@@ -32,7 +32,7 @@ const DAY_LABEL = { day: '일', week: '주', month: '월', year: '년' }
 // 증시상황 표시명 → 차트 API key
 const INDEX_KEY = { '코스피': 'KOSPI', '코스닥': 'KOSDAQ', '다우': 'DJI', '나스닥': 'IXIC', '나스닥100': 'NDX', '미국USD': 'USD' }
 
-function MiniChart({ kind = 'stock', id, onClose }) {
+function MiniChart({ kind = 'stock', id }) {
   const dailyOnly = kind !== 'stock'
   const [mode, setMode] = useState(dailyOnly ? 'day' : 'minute')   // 'minute' | 'day'
   const [unit, setUnit] = useState(dailyOnly ? 'day' : '1')
@@ -76,11 +76,10 @@ function MiniChart({ kind = 'stock', id, onClose }) {
       return
     }
     const rect = boxRef.current.getBoundingClientRect()
-    const rel = (e.clientX - rect.left) / rect.width
-    if (rel >= 0.34 && rel <= 0.66) { onClose(); return }   // 가운데 탭 = 닫기
+    const left = (e.clientX - rect.left) < rect.width / 2
     if (dailyOnly) {
-      cycle(rel < 0.34 ? -1 : +1)      // 분봉 없음: 좌탭 내려가기 / 우탭 올라가기
-    } else if (rel < 0.34) {
+      cycle(left ? -1 : +1)            // 분봉 없음: 좌탭 이전 / 우탭 다음
+    } else if (left) {
       setMode('minute'); setUnit('1')  // 좌탭 = 분봉
     } else {
       setMode('day'); setUnit('day')   // 우탭 = 일봉
@@ -101,8 +100,8 @@ function MiniChart({ kind = 'stock', id, onClose }) {
     }).join(' ')
   }
   const label = (!dailyOnly && mode === 'minute') ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
-  const hint = dailyOnly ? '좌탭 이전 · 우탭 다음 · 가운데 닫기 · 드래그 일/주/월/년'
-    : '좌탭 분봉 · 우탭 일봉 · 가운데 닫기 · 드래그 구분'
+  const hint = dailyOnly ? '좌탭 이전 · 우탭 다음 · 드래그 일/주/월/년 · 항목 다시 탭하면 닫힘'
+    : '좌탭 분봉 · 우탭 일봉 · 드래그 구분 · 항목 다시 탭하면 닫힘'
   const last = points.length ? points[points.length - 1].c : 0
   const first = points.length ? points[0].c : 0
   const lineColor = last >= first ? '#d32f2f' : '#1565c0'
@@ -146,7 +145,7 @@ function StockCard({ stock, onAnalyze }) {
 
   return (
     <div
-      onClick={() => setChartOpen(true)}
+      onClick={() => setChartOpen(o => !o)}
       style={{
       background: c.bg,
       border: `2px solid ${c.border}`,
@@ -244,7 +243,7 @@ function StockCard({ stock, onAnalyze }) {
         </div>
       </div>
 
-      {chartOpen && <MiniChart kind="stock" id={stock.code} onClose={() => setChartOpen(false)} />}
+      {chartOpen && <MiniChart kind="stock" id={stock.code} />}
     </div>
   )
 }
@@ -439,7 +438,7 @@ export default function Dashboard() {
                     </tr>
                     {ikey && openIndex === ikey && (
                       <tr><td colSpan={4} style={{ padding: 0 }}>
-                        <MiniChart kind="index" id={ikey} onClose={() => setOpenIndex(null)} />
+                        <MiniChart kind="index" id={ikey} />
                       </td></tr>
                     )}
                   </Fragment>
@@ -487,7 +486,7 @@ export default function Dashboard() {
               <span>매입 {fmt(g.buy)}원</span>
               <span>평가 {fmt(g.evl)}원</span>
             </div>
-            {openGroup === g.group && <MiniChart kind="portfolio" id={g.group} onClose={() => setOpenGroup(null)} />}
+            {openGroup === g.group && <MiniChart kind="portfolio" id={g.group} />}
           </div>
         ))}
       </div>
