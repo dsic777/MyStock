@@ -25,6 +25,100 @@ function fmtIdx(n) {
   return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// 항목 탭 시 펼쳐지는 선그래프 (좌탭:분봉 / 우탭:일봉 / 가운데:닫기 / 좌우드래그:구분변경)
+const MIN_UNITS = ['1', '3', '5', '10', '20', '30']
+const DAY_UNITS = ['day', 'week', 'month', 'year']
+const DAY_LABEL = { day: '일', week: '주', month: '월', year: '년' }
+
+function MiniChart({ code, onClose }) {
+  const [mode, setMode] = useState('minute')   // 'minute' | 'day'
+  const [unit, setUnit] = useState('1')
+  const [points, setPoints] = useState([])
+  const [loading, setLoading] = useState(true)
+  const boxRef = useRef(null)
+  const drag = useRef(null)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    authFetch(`/api/chart/${code}?type=${mode}&unit=${unit}`)
+      .then(r => r.json())
+      .then(d => { if (alive) { setPoints(d.points || []); setLoading(false) } })
+      .catch(() => { if (alive) { setPoints([]); setLoading(false) } })
+    return () => { alive = false }
+  }, [code, mode, unit])
+
+  // dir: +1 = 올라가기(다음 큰 단위), -1 = 내려가기
+  const cycle = (dir) => {
+    const list = mode === 'minute' ? MIN_UNITS : DAY_UNITS
+    let i = list.indexOf(unit) + dir
+    if (i < 0) i = 0
+    if (i >= list.length) i = list.length - 1
+    setUnit(list[i])
+  }
+
+  const onDown = (e) => { drag.current = { x0: e.clientX, moved: false } }
+  const onMove = (e) => {
+    if (drag.current && Math.abs(e.clientX - drag.current.x0) > 30) drag.current.moved = true
+  }
+  const onUp = (e) => {
+    const d = drag.current; drag.current = null
+    if (!d) return
+    const dx = e.clientX - d.x0
+    if (d.moved && Math.abs(dx) > 30) {
+      cycle(dx < 0 ? +1 : -1)          // 좌드래그=올라가기 / 우드래그=내려가기
+    } else {
+      const rect = boxRef.current.getBoundingClientRect()
+      const rel = (e.clientX - rect.left) / rect.width
+      if (rel < 0.34) { setMode('minute'); setUnit('1') }
+      else if (rel > 0.66) { setMode('day'); setUnit('day') }
+      else onClose()
+    }
+  }
+
+  // SVG 선그래프 path
+  const W = 600, H = 190, pad = 6
+  let path = ''
+  if (points.length > 1) {
+    const cs = points.map(p => p.c)
+    const min = Math.min(...cs), max = Math.max(...cs), range = (max - min) || 1
+    const n = points.length
+    path = cs.map((cv, i) => {
+      const x = pad + (i / (n - 1)) * (W - 2 * pad)
+      const y = pad + (1 - (cv - min) / range) * (H - 2 * pad)
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+  }
+  const label = mode === 'minute' ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
+  const last = points.length ? points[points.length - 1].c : 0
+  const first = points.length ? points[0].c : 0
+  const lineColor = last >= first ? '#d32f2f' : '#1565c0'
+
+  return (
+    <div
+      ref={boxRef}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+      style={{ marginTop: 10, background: '#0b1728', borderRadius: 10, padding: 8, userSelect: 'none', touchAction: 'pan-y' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9fb3c8', marginBottom: 4 }}>
+        <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{label}</span>
+        <span style={{ fontSize: 10.5, color: '#6b7f95' }}>좌탭 분봉 · 우탭 일봉 · 가운데 닫기 · 드래그 구분</span>
+      </div>
+      {loading ? (
+        <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>불러오는 중...</div>
+      ) : points.length < 2 ? (
+        <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>데이터 없음</div>
+      ) : (
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
+          <path d={path} fill="none" stroke={lineColor} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        </svg>
+      )}
+      <div style={{ textAlign: 'right', fontSize: 13, color: lineColor, fontWeight: 700, marginTop: 2 }}>{fmt(last)}원</div>
+    </div>
+  )
+}
+
 function StockCard({ stock, onAnalyze }) {
   const c = STATUS_COLOR[stock.status] || STATUS_COLOR['정상']
   const icon = STATUS_ICON[stock.status] || ''
@@ -33,14 +127,18 @@ function StockCard({ stock, onAnalyze }) {
   const evalTotal = stock.current_price * stock.quantity
   const dayChangeColor = (stock.day_change || 0) >= 0 ? '#d32f2f' : '#1565c0'
   const dayRate = stock.prev_close ? ((stock.current_price - stock.prev_close) / stock.prev_close * 100) : 0
+  const [chartOpen, setChartOpen] = useState(false)
 
   return (
-    <div style={{
+    <div
+      onClick={() => setChartOpen(true)}
+      style={{
       background: c.bg,
       border: `2px solid ${c.border}`,
       borderRadius: 12,
       padding: '16px 18px',
       marginBottom: 12,
+      cursor: 'pointer',
     }}>
       {/* 1번줄: 아이콘 + 2번줄: 라벨 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
@@ -55,7 +153,7 @@ function StockCard({ stock, onAnalyze }) {
           </div>
           {/* 매도판단 아이콘 */}
           <button
-            onClick={() => onAnalyze(stock)}
+            onClick={(e) => { e.stopPropagation(); onAnalyze(stock) }}
             style={{
               background: '#1565c0', color: '#fff', border: 'none',
               borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
@@ -130,6 +228,8 @@ function StockCard({ stock, onAnalyze }) {
           <div style={{ fontSize: 17, fontWeight: 500, color: profitColor }}>{fmt(evalTotal)}원</div>
         </div>
       </div>
+
+      {chartOpen && <MiniChart code={stock.code} onClose={() => setChartOpen(false)} />}
     </div>
   )
 }
