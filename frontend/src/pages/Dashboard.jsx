@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Settings from './Settings'
 import AlertDetail from './AlertDetail'
@@ -29,10 +29,13 @@ function fmtIdx(n) {
 const MIN_UNITS = ['1', '3', '5', '10', '20', '30']
 const DAY_UNITS = ['day', 'week', 'month', 'year']
 const DAY_LABEL = { day: '일', week: '주', month: '월', year: '년' }
+// 증시상황 표시명 → 차트 API key
+const INDEX_KEY = { '코스피': 'KOSPI', '코스닥': 'KOSDAQ', '다우': 'DJI', '나스닥': 'IXIC', '나스닥100': 'NDX', '미국USD': 'USD' }
 
-function MiniChart({ code, onClose }) {
-  const [mode, setMode] = useState('minute')   // 'minute' | 'day'
-  const [unit, setUnit] = useState('1')
+function MiniChart({ kind = 'stock', id, onClose }) {
+  const dailyOnly = kind !== 'stock'
+  const [mode, setMode] = useState(dailyOnly ? 'day' : 'minute')   // 'minute' | 'day'
+  const [unit, setUnit] = useState(dailyOnly ? 'day' : '1')
   const [points, setPoints] = useState([])
   const [loading, setLoading] = useState(true)
   const boxRef = useRef(null)
@@ -41,12 +44,15 @@ function MiniChart({ code, onClose }) {
   useEffect(() => {
     let alive = true
     setLoading(true)
-    authFetch(`/api/chart/${code}?type=${mode}&unit=${unit}`)
+    const url = kind === 'stock' ? `/api/chart/${id}?type=${mode}&unit=${unit}`
+      : kind === 'index' ? `/api/chart/index/${id}?unit=${unit}`
+        : `/api/chart/portfolio?group=${id}&unit=${unit}`
+    authFetch(url)
       .then(r => r.json())
       .then(d => { if (alive) { setPoints(d.points || []); setLoading(false) } })
       .catch(() => { if (alive) { setPoints([]); setLoading(false) } })
     return () => { alive = false }
-  }, [code, mode, unit])
+  }, [kind, id, mode, unit])
 
   // dir: +1 = 올라가기(다음 큰 단위), -1 = 내려가기
   const cycle = (dir) => {
@@ -67,12 +73,17 @@ function MiniChart({ code, onClose }) {
     const dx = e.clientX - d.x0
     if (d.moved && Math.abs(dx) > 30) {
       cycle(dx < 0 ? +1 : -1)          // 좌드래그=올라가기 / 우드래그=내려가기
+      return
+    }
+    const rect = boxRef.current.getBoundingClientRect()
+    const rel = (e.clientX - rect.left) / rect.width
+    if (rel >= 0.34 && rel <= 0.66) { onClose(); return }   // 가운데 탭 = 닫기
+    if (dailyOnly) {
+      cycle(rel < 0.34 ? -1 : +1)      // 분봉 없음: 좌탭 내려가기 / 우탭 올라가기
+    } else if (rel < 0.34) {
+      setMode('minute'); setUnit('1')  // 좌탭 = 분봉
     } else {
-      const rect = boxRef.current.getBoundingClientRect()
-      const rel = (e.clientX - rect.left) / rect.width
-      if (rel < 0.34) { setMode('minute'); setUnit('1') }
-      else if (rel > 0.66) { setMode('day'); setUnit('day') }
-      else onClose()
+      setMode('day'); setUnit('day')   // 우탭 = 일봉
     }
   }
 
@@ -89,10 +100,14 @@ function MiniChart({ code, onClose }) {
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
     }).join(' ')
   }
-  const label = mode === 'minute' ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
+  const label = (!dailyOnly && mode === 'minute') ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
+  const hint = dailyOnly ? '좌탭 이전 · 우탭 다음 · 가운데 닫기 · 드래그 일/주/월/년'
+    : '좌탭 분봉 · 우탭 일봉 · 가운데 닫기 · 드래그 구분'
   const last = points.length ? points[points.length - 1].c : 0
   const first = points.length ? points[0].c : 0
   const lineColor = last >= first ? '#d32f2f' : '#1565c0'
+  const isWon = kind === 'stock' || kind === 'portfolio' || id === 'USD'
+  const sign = (kind === 'portfolio' && last >= 0) ? '+' : ''
 
   return (
     <div
@@ -103,7 +118,7 @@ function MiniChart({ code, onClose }) {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9fb3c8', marginBottom: 4 }}>
         <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{label}</span>
-        <span style={{ fontSize: 10.5, color: '#6b7f95' }}>좌탭 분봉 · 우탭 일봉 · 가운데 닫기 · 드래그 구분</span>
+        <span style={{ fontSize: 10.5, color: '#6b7f95' }}>{hint}</span>
       </div>
       {loading ? (
         <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>불러오는 중...</div>
@@ -114,7 +129,7 @@ function MiniChart({ code, onClose }) {
           <path d={path} fill="none" stroke={lineColor} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
         </svg>
       )}
-      <div style={{ textAlign: 'right', fontSize: 13, color: lineColor, fontWeight: 700, marginTop: 2 }}>{fmt(last)}원</div>
+      <div style={{ textAlign: 'right', fontSize: 13, color: lineColor, fontWeight: 700, marginTop: 2 }}>{sign}{fmt(last)}{isWon ? '원' : ''}</div>
     </div>
   )
 }
@@ -229,7 +244,7 @@ function StockCard({ stock, onAnalyze }) {
         </div>
       </div>
 
-      {chartOpen && <MiniChart code={stock.code} onClose={() => setChartOpen(false)} />}
+      {chartOpen && <MiniChart kind="stock" id={stock.code} onClose={() => setChartOpen(false)} />}
     </div>
   )
 }
@@ -247,6 +262,8 @@ export default function Dashboard() {
   const [selectedAlert, setSelectedAlert] = useState(null)
 
   const [showMarket, setShowMarket] = useState(false)
+  const [openIndex, setOpenIndex] = useState(null)   // 증시상황: 열린 지수 key
+  const [openGroup, setOpenGroup] = useState(null)   // 요약: 열린 손익 group
   const [indices, setIndices] = useState([])
 
   const handleLogout = () => {
@@ -358,9 +375,9 @@ export default function Dashboard() {
     return { buy, evl, dayChange, profit, rate, dayRate }
   }
   const summaryGroups = [
-    { label: '총 평가손익', bg: '#0d47a1', ...calcStats(stocks) },
-    { label: '일반주 평가손익', bg: '#1565c0', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
-    { label: 'ETF 평가손익', bg: '#00838f', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
+    { label: '총 평가손익', group: 'total', bg: '#0d47a1', ...calcStats(stocks) },
+    { label: '일반주 평가손익', group: 'normal', bg: '#1565c0', ...calcStats(stocks.filter(s => s.stock_type !== 'ETF')) },
+    { label: 'ETF 평가손익', group: 'etf', bg: '#00838f', ...calcStats(stocks.filter(s => s.stock_type === 'ETF')) },
   ]
 
   return (
@@ -408,15 +425,24 @@ export default function Dashboard() {
               ) : indices.map(ix => {
                 const up = (ix.change || 0) >= 0
                 const col = up ? '#f87171' : '#60a5fa'
+                const ikey = INDEX_KEY[ix.name]
                 return (
-                  <tr key={ix.name} style={{ borderTop: '1px solid rgba(148,163,184,0.2)' }}>
-                    <td style={{ textAlign: 'left', padding: '6px 0', fontWeight: 700 }}>{ix.name}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtIdx(ix.today)}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0', color: '#94a3b8' }}>{fmtIdx(ix.prev)}</td>
-                    <td style={{ textAlign: 'right', padding: '6px 0', color: col, fontWeight: 700 }}>
-                      {up ? '▲' : '▼'} {fmtIdx(Math.abs(ix.change))} ({up ? '+' : '-'}{Math.abs(ix.ratio)}%)
-                    </td>
-                  </tr>
+                  <Fragment key={ix.name}>
+                    <tr onClick={() => ikey && setOpenIndex(openIndex === ikey ? null : ikey)}
+                        style={{ borderTop: '1px solid rgba(148,163,184,0.2)', cursor: ikey ? 'pointer' : 'default' }}>
+                      <td style={{ textAlign: 'left', padding: '6px 0', fontWeight: 700 }}>{ix.name}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 0' }}>{fmtIdx(ix.today)}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 0', color: '#94a3b8' }}>{fmtIdx(ix.prev)}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 0', color: col, fontWeight: 700 }}>
+                        {up ? '▲' : '▼'} {fmtIdx(Math.abs(ix.change))} ({up ? '+' : '-'}{Math.abs(ix.ratio)}%)
+                      </td>
+                    </tr>
+                    {ikey && openIndex === ikey && (
+                      <tr><td colSpan={4} style={{ padding: 0 }}>
+                        <MiniChart kind="index" id={ikey} onClose={() => setOpenIndex(null)} />
+                      </td></tr>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -430,8 +456,10 @@ export default function Dashboard() {
         color: '#fff', marginBottom: 14
       }}>
         {summaryGroups.map((g, i) => (
-          <div key={g.label} style={{
-            background: g.bg, borderRadius: 10, padding: '10px 12px',
+          <div key={g.label}
+            onClick={() => setOpenGroup(openGroup === g.group ? null : g.group)}
+            style={{
+            background: g.bg, borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
             marginBottom: i < summaryGroups.length - 1 ? 8 : 0
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -459,6 +487,7 @@ export default function Dashboard() {
               <span>매입 {fmt(g.buy)}원</span>
               <span>평가 {fmt(g.evl)}원</span>
             </div>
+            {openGroup === g.group && <MiniChart kind="portfolio" id={g.group} onClose={() => setOpenGroup(null)} />}
           </div>
         ))}
       </div>
