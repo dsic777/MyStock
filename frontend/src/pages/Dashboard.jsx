@@ -100,7 +100,11 @@ function MiniChart({ kind = 'stock', id }) {
     line = cs.map((v, i) => `${i ? 'L' : 'M'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ')
     area = `${line} L${xAt(n - 1).toFixed(1)},${(H - padBot).toFixed(1)} L${xAt(0).toFixed(1)},${(H - padBot).toFixed(1)} Z`
   }
-  const gy = [0.25, 0.5, 0.75].map(f => padTop + f * (H - padTop - padBot))
+  const NY = 6
+  const yTicks = Array.from({ length: NY }, (_, k) => {
+    const v = vmin + (vmax - vmin) * (k / (NY - 1))
+    return { v, top: yAt(v) }
+  })
   const label = (!dailyOnly && mode === 'minute') ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
   const hint = dailyOnly ? '좌탭 이전 · 우탭 다음 · 드래그 일/주/월/년 · 항목 다시 탭하면 닫힘'
     : '좌탭 분봉 · 우탭 일봉 · 드래그 구분 · 항목 다시 탭하면 닫힘'
@@ -120,10 +124,10 @@ function MiniChart({ kind = 'stock', id }) {
     return t
   }
   const yLabel = (v) => `${fmt(Math.round(v))}${isWon ? '원' : ''}`
-  const NX = Math.min(12, n)
+  const NX = Math.min(10, n)
   const xTicks = Array.from({ length: NX }, (_, j) => {
     const i = NX > 1 ? Math.round(j / (NX - 1) * (n - 1)) : 0
-    return { pct: (xAt(i) / W) * 100, t: points[i].t }
+    return { x: xAt(i), pct: (xAt(i) / W) * 100, t: points[i].t }
   })
 
   return (
@@ -152,12 +156,18 @@ function MiniChart({ kind = 'stock', id }) {
                   <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {gy.map((y, i) => (
-                <line key={i} x1={padX} y1={y} x2={W - padX} y2={y} stroke="rgba(148,163,184,0.12)" strokeWidth="0.5" />
+              {yTicks.map((yt, i) => (
+                <line key={'h' + i} x1={padX} y1={yt.top} x2={W - padX} y2={yt.top} stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+              ))}
+              {xTicks.map((xt, i) => (
+                <line key={'v' + i} x1={xt.x} y1={padTop} x2={xt.x} y2={H - padBot} stroke="rgba(148,163,184,0.10)" strokeWidth="0.5" />
               ))}
               <path d={area} fill={`url(#${fillId})`} stroke="none" />
               <path d={line} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             </svg>
+            {yTicks.map((yt, i) => (
+              <span key={i} style={{ position: 'absolute', right: 5, top: `${Math.min(H - 12, Math.max(0, yt.top - 7))}px`, fontSize: 9, fontWeight: 600, color: '#fcd34d', textShadow: '0 0 3px #000, 0 1px 2px #000', pointerEvents: 'none' }}>{yLabel(yt.v)}</span>
+            ))}
           </div>
           {/* X축 대각선 날짜 (밝은 시안) */}
           <div style={{ position: 'relative', height: 32, marginTop: 2 }}>
