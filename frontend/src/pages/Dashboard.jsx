@@ -148,7 +148,7 @@ function MiniChart({ kind = 'stock', id }) {
         <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>데이터 없음</div>
       ) : (
         <>
-          <div style={{ position: 'relative', height: H }}>
+          <div style={{ position: 'relative', height: H, border: '1px solid rgba(148,163,184,0.42)', borderRadius: 6, overflow: 'hidden' }}>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
               <defs>
                 <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
@@ -157,10 +157,10 @@ function MiniChart({ kind = 'stock', id }) {
                 </linearGradient>
               </defs>
               {yTicks.map((yt, i) => (
-                <line key={'h' + i} x1={padX} y1={yt.top} x2={W - padX} y2={yt.top} stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+                <line key={'h' + i} x1={padX} y1={yt.top} x2={W - padX} y2={yt.top} stroke="rgba(148,163,184,0.42)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
               ))}
               {xTicks.map((xt, i) => (
-                <line key={'v' + i} x1={xt.x} y1={padTop} x2={xt.x} y2={H - padBot} stroke="rgba(148,163,184,0.10)" strokeWidth="0.5" />
+                <line key={'v' + i} x1={xt.x} y1={padTop} x2={xt.x} y2={H - padBot} stroke="rgba(148,163,184,0.42)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
               ))}
               <path d={area} fill={`url(#${fillId})`} stroke="none" />
               <path d={line} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
