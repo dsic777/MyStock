@@ -86,27 +86,40 @@ function MiniChart({ kind = 'stock', id }) {
     }
   }
 
-  // SVG 선그래프 path
-  const W = 600, H = 190, pad = 6
-  let path = ''
-  if (points.length > 1) {
-    const cs = points.map(p => p.c)
-    const min = Math.min(...cs), max = Math.max(...cs), range = (max - min) || 1
-    const n = points.length
-    path = cs.map((cv, i) => {
-      const x = pad + (i / (n - 1)) * (W - 2 * pad)
-      const y = pad + (1 - (cv - min) / range) * (H - 2 * pad)
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-    }).join(' ')
+  // ── 그래프 좌표/지표 ──
+  const n = points.length
+  const cs = points.map(p => p.c)
+  const vmin = n ? Math.min(...cs) : 0
+  const vmax = n ? Math.max(...cs) : 0
+  const range = (vmax - vmin) || 1
+  const W = 600, H = 200, padX = 6, padTop = 12, padBot = 22
+  const xAt = (i) => padX + (n > 1 ? i / (n - 1) : 0) * (W - 2 * padX)
+  const yAt = (v) => padTop + (1 - (v - vmin) / range) * (H - padTop - padBot)
+  let line = '', area = ''
+  if (n > 1) {
+    line = cs.map((v, i) => `${i ? 'L' : 'M'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ')
+    area = `${line} L${xAt(n - 1).toFixed(1)},${(H - padBot).toFixed(1)} L${xAt(0).toFixed(1)},${(H - padBot).toFixed(1)} Z`
   }
+  const gy = [0.25, 0.5, 0.75].map(f => padTop + f * (H - padTop - padBot))
   const label = (!dailyOnly && mode === 'minute') ? `분봉 ${unit}분` : `일봉 ${DAY_LABEL[unit]}`
   const hint = dailyOnly ? '좌탭 이전 · 우탭 다음 · 드래그 일/주/월/년 · 항목 다시 탭하면 닫힘'
     : '좌탭 분봉 · 우탭 일봉 · 드래그 구분 · 항목 다시 탭하면 닫힘'
-  const last = points.length ? points[points.length - 1].c : 0
-  const first = points.length ? points[0].c : 0
-  const lineColor = last >= first ? '#d32f2f' : '#1565c0'
+  const last = n ? cs[n - 1] : 0
+  const first = n ? cs[0] : 0
+  const up = last >= first
+  const lineColor = up ? '#ef4444' : '#38bdf8'
+  const fillId = ('g' + kind + id).replace(/[^a-zA-Z0-9_]/g, '')
   const isWon = kind === 'stock' || kind === 'portfolio' || id === 'USD'
   const sign = (kind === 'portfolio' && last >= 0) ? '+' : ''
+  const fmtT = (t) => {
+    if (!t) return ''
+    if (t.length === 12) return `${t.slice(4, 6)}/${t.slice(6, 8)} ${t.slice(8, 10)}:${t.slice(10, 12)}`
+    if (t.length === 8) return `${t.slice(2, 4)}/${t.slice(4, 6)}/${t.slice(6, 8)}`
+    if (t.includes('W')) return `${t.slice(2, 4)} ${t.slice(5)}`
+    if (t.length === 6) return `${t.slice(2, 4)}/${t.slice(4, 6)}`
+    return t
+  }
+  const yLabel = (v) => `${fmt(Math.round(v))}${isWon ? '원' : ''}`
 
   return (
     <div
@@ -124,9 +137,25 @@ function MiniChart({ kind = 'stock', id }) {
       ) : points.length < 2 ? (
         <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>데이터 없음</div>
       ) : (
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
-          <path d={path} fill="none" stroke={lineColor} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-        </svg>
+        <div style={{ position: 'relative', height: H }}>
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
+            <defs>
+              <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {gy.map((y, i) => (
+              <line key={i} x1={padX} y1={y} x2={W - padX} y2={y} stroke="rgba(148,163,184,0.12)" strokeWidth="0.5" />
+            ))}
+            <path d={area} fill={`url(#${fillId})`} stroke="none" />
+            <path d={line} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <span style={{ position: 'absolute', top: 2, left: 7, fontSize: 10.5, color: '#94a3b8' }}>{yLabel(vmax)}</span>
+          <span style={{ position: 'absolute', bottom: 20, left: 7, fontSize: 10.5, color: '#94a3b8' }}>{yLabel(vmin)}</span>
+          <span style={{ position: 'absolute', bottom: 3, left: 7, fontSize: 10.5, color: '#7f93a8' }}>{fmtT(points[0].t)}</span>
+          <span style={{ position: 'absolute', bottom: 3, right: 7, fontSize: 10.5, color: '#7f93a8' }}>{fmtT(points[n - 1].t)}</span>
+        </div>
       )}
       <div style={{ textAlign: 'right', fontSize: 13, color: lineColor, fontWeight: 700, marginTop: 2 }}>{sign}{fmt(last)}{isWon ? '원' : ''}</div>
     </div>
