@@ -92,7 +92,7 @@ function MiniChart({ kind = 'stock', id }) {
   const vmin = n ? Math.min(...cs) : 0
   const vmax = n ? Math.max(...cs) : 0
   const range = (vmax - vmin) || 1
-  const W = 600, H = 200, padX = 6, padTop = 12, padBot = 22
+  const W = 600, H = 180, padX = 6, padTop = 6, padBot = 6
   const xAt = (i) => padX + (n > 1 ? i / (n - 1) : 0) * (W - 2 * padX)
   const yAt = (v) => padTop + (1 - (v - vmin) / range) * (H - padTop - padBot)
   let line = '', area = ''
@@ -120,6 +120,11 @@ function MiniChart({ kind = 'stock', id }) {
     return t
   }
   const yLabel = (v) => `${fmt(Math.round(v))}${isWon ? '원' : ''}`
+  const NX = Math.min(12, n)
+  const xTicks = Array.from({ length: NX }, (_, j) => {
+    const i = NX > 1 ? Math.round(j / (NX - 1) * (n - 1)) : 0
+    return { pct: (xAt(i) / W) * 100, t: points[i].t }
+  })
 
   return (
     <div
@@ -128,36 +133,40 @@ function MiniChart({ kind = 'stock', id }) {
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
       style={{ marginTop: 10, background: '#0b1728', borderRadius: 10, padding: 8, userSelect: 'none', touchAction: 'pan-y' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9fb3c8', marginBottom: 4 }}>
-        <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{label}</span>
-        <span style={{ fontSize: 10.5, color: '#6b7f95' }}>{hint}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 12 }}>{label}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: '#fcd34d', whiteSpace: 'nowrap' }}>↑{yLabel(vmax)}<span style={{ marginLeft: 8 }}>↓{yLabel(vmin)}</span></span>
       </div>
+      <div style={{ fontSize: 9.5, color: '#6b7f95', marginBottom: 4 }}>{hint}</div>
       {loading ? (
         <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>불러오는 중...</div>
       ) : points.length < 2 ? (
         <div style={{ height: H, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7f95', fontSize: 13 }}>데이터 없음</div>
       ) : (
-        <div style={{ position: 'relative', height: H }}>
-          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
-            <defs>
-              <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={lineColor} stopOpacity="0.35" />
-                <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            {gy.map((y, i) => (
-              <line key={i} x1={padX} y1={y} x2={W - padX} y2={y} stroke="rgba(148,163,184,0.12)" strokeWidth="0.5" />
+        <>
+          <div style={{ position: 'relative', height: H }}>
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
+              <defs>
+                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={lineColor} stopOpacity="0.35" />
+                  <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {gy.map((y, i) => (
+                <line key={i} x1={padX} y1={y} x2={W - padX} y2={y} stroke="rgba(148,163,184,0.12)" strokeWidth="0.5" />
+              ))}
+              <path d={area} fill={`url(#${fillId})`} stroke="none" />
+              <path d={line} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            </svg>
+          </div>
+          {/* X축 대각선 날짜 (밝은 시안) */}
+          <div style={{ position: 'relative', height: 32, marginTop: 2 }}>
+            {xTicks.map((xt, i) => (
+              <span key={i} style={{ position: 'absolute', left: `${xt.pct}%`, top: 0, transform: 'translateX(-50%) rotate(-45deg)', transformOrigin: 'center top', whiteSpace: 'nowrap', fontSize: 9, color: '#67e8f9', textShadow: '0 0 3px #000' }}>{fmtT(xt.t)}</span>
             ))}
-            <path d={area} fill={`url(#${fillId})`} stroke="none" />
-            <path d={line} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          </svg>
-          <span style={{ position: 'absolute', top: 2, left: 7, fontSize: 10.5, color: '#94a3b8' }}>{yLabel(vmax)}</span>
-          <span style={{ position: 'absolute', bottom: 20, left: 7, fontSize: 10.5, color: '#94a3b8' }}>{yLabel(vmin)}</span>
-          <span style={{ position: 'absolute', bottom: 3, left: 7, fontSize: 10.5, color: '#7f93a8' }}>{fmtT(points[0].t)}</span>
-          <span style={{ position: 'absolute', bottom: 3, right: 7, fontSize: 10.5, color: '#7f93a8' }}>{fmtT(points[n - 1].t)}</span>
-        </div>
+          </div>
+        </>
       )}
-      <div style={{ textAlign: 'right', fontSize: 13, color: lineColor, fontWeight: 700, marginTop: 2 }}>{sign}{fmt(last)}{isWon ? '원' : ''}</div>
     </div>
   )
 }
