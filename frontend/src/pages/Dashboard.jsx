@@ -189,6 +189,7 @@ function StockCard({ stock, onAnalyze }) {
   const evalTotal = stock.current_price * stock.quantity
   const dayChangeColor = (stock.day_change || 0) >= 0 ? '#d32f2f' : '#1565c0'
   const dayRate = stock.prev_close ? ((stock.current_price - stock.prev_close) / stock.prev_close * 100) : 0
+  const dayChangePerShare = (stock.current_price || 0) - (stock.prev_close || 0)   // 1주당 일일증감
   const [chartOpen, setChartOpen] = useState(false)
 
   return (
@@ -267,10 +268,19 @@ function StockCard({ stock, onAnalyze }) {
           </div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#444', fontWeight: 600 }}>전일대비</div>
+          {/* 타이틀 한줄 위로 */}
+          <div style={{ fontSize: 14, color: '#444', fontWeight: 600, marginTop: -20 }}>전일대비</div>
+          {/* 1주당 일일증감 (현재 전일대비 자리) */}
+          <div style={{ fontSize: 15, fontWeight: 600, color: dayChangeColor }}>
+            {dayChangePerShare >= 0 ? '+' : ''}{fmt(dayChangePerShare)}원
+          </div>
+          {/* 증감율 */}
+          <div style={{ fontSize: 13, fontWeight: 600, color: dayChangeColor }}>
+            ({dayRate >= 0 ? '+' : ''}{dayRate.toFixed(2)}%)
+          </div>
+          {/* 종목별 보유 증감액계 (현재값 그대로) */}
           <div style={{ fontSize: 15, fontWeight: 600, color: dayChangeColor }}>
             {(stock.day_change || 0) >= 0 ? '+' : ''}{fmt(stock.day_change || 0)}원
-            <span style={{ fontSize: 13, fontWeight: 600, color: dayChangeColor, marginLeft: 4 }}>({dayRate >= 0 ? '+' : ''}{dayRate.toFixed(2)}%)</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
