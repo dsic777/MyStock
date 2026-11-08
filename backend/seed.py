@@ -8,6 +8,16 @@
 from app.core.database import SessionLocal
 from app.models.models import Account, Stock, Settings
 from app.services.price_fetcher import get_current_price, get_prev_close
+from app.api.chart import _fetch
+from datetime import datetime, timedelta, timezone
+
+
+def _last_trading_close(code: str) -> int:
+    """전 거래일 종가 — 일봉에서 오늘(한국 날짜) 전 마지막 날. 실패 시 0
+    (장 시작 전 네이버 basic 값은 전일 종가와 달라 일봉을 쓴다)"""
+    today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y%m%d")
+    days = [d for d in _fetch(code, "day", 5) if d["t"][:8] < today]
+    return int(days[-1]["c"]) if days else 0
 
 
 # name, code, 유형, 수량, 매입가, 전일가(전영업일 종가)
@@ -48,7 +58,8 @@ def run_seed():
             buy_price = item["buy_price"]
             prev_close = get_prev_close(item["code"]) or item["prev_close"]   # 실시간 전영업일 종가
             current = get_current_price(item["code"]) or item["prev_close"]    # 실시간 현재가
-            high_price = max(buy_price, current, prev_close)
+            # 고점가 = 전 거래일 종가에서 다시 시작 (매입가 기준이면 손실 종목은 매도 신호가 안 난다)
+            high_price = _last_trading_close(item["code"]) or prev_close
             stock = Stock(
                 account_id=account.id,
                 code=item["code"],
