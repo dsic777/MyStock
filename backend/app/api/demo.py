@@ -32,21 +32,8 @@ def _reset():
 
     run_seed()
 
-    # 초기화 후 현재가 1회 갱신
-    db2 = SessionLocal()
-    try:
-        from app.services.price_fetcher import get_current_price
-        stocks = db2.query(Stock).filter(Stock.is_active == True).all()
-        for s in stocks:
-            price = get_current_price(s.code)
-            if price > 0:
-                s.current_price = price
-                if price > s.high_price:
-                    s.high_price = price
-        db2.commit()
-    except Exception:
-        db2.rollback()
-    finally:
-        db2.close()
+    # 초기화 후 현재가 · 고점가(지난주 금요일부터 최고가) 1회 갱신
+    from app.services.trailing_stop import refresh_highs_job
+    refresh_highs_job(force=True)
 
     return {"success": True, "message": "데모 데이터가 초기화되었습니다."}

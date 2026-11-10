@@ -24,7 +24,7 @@ _HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://m.stock.naver.com/"
 # 네이버 fchart (개별종목·국내지수)
 # ─────────────────────────────────────────────
 def _fetch(symbol: str, timeframe: str, count: int):
-    """네이버 fchart → [{'t','c'}] (오름차순)"""
+    """네이버 fchart → [{'t','c','h'}] (오름차순, h=고가 · 없으면 종가)"""
     url = ("https://fchart.stock.naver.com/sise.nhn"
            "?symbol=%s&timeframe=%s&count=%d&requestType=0" % (symbol, timeframe, count))
     try:
@@ -43,9 +43,14 @@ def _fetch(symbol: str, timeframe: str, count: int):
         if close in ("", "null", "None"):
             continue
         try:
-            out.append({"t": p[0], "c": float(close)})
+            c = float(close)
         except ValueError:
             continue
+        try:
+            h = float(p[2])
+        except ValueError:
+            h = c
+        out.append({"t": p[0], "c": c, "h": h})
     return out
 
 

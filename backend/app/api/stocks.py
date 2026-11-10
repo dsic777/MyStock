@@ -4,7 +4,8 @@ from app.core.database import get_db
 from app.models.models import Stock, Settings, SellHistory
 from app.schemas.schemas import StockCreate, StockUpdate, StockResponse
 from app.api.auth import get_current_user
-from app.services.price_fetcher import get_current_price, get_prev_close, prefetch
+from app.services.price_fetcher import get_current_price
+from app.services.trailing_stop import update_quotes
 
 router = APIRouter(prefix="/stocks", tags=["종목"], dependencies=[Depends(get_current_user)])
 
@@ -60,22 +61,8 @@ def get_stocks(account_id: int = None, db: Session = Depends(get_db)):
         query = query.filter(Stock.account_id == account_id)
     stocks = query.all()
 
-    # 실시간 시세 갱신 — 모든 종목 시세를 병렬로 미리 채운 뒤(캐시 30초) 순차 반영
-    prefetch([s.code for s in stocks])
-    _changed = False
-    for s in stocks:
-        cur = get_current_price(s.code)
-        if cur:
-            s.current_price = cur
-            if cur > s.high_price:
-                s.high_price = cur
-            _changed = True
-        pc = get_prev_close(s.code)
-        if pc:
-            s.prev_close = pc
-            _changed = True
-    if _changed:
-        db.commit()
+    # 실시간 시세 갱신 (고점가는 현재가가 더 높을 때만 올림)
+    update_quotes(db, stocks)
 
     result = []
     for s in stocks:

@@ -66,15 +66,9 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     # 로그인 시 현재가 1회 갱신
     try:
         from app.models.models import Stock
-        from app.services.price_fetcher import get_current_price
+        from app.services.trailing_stop import update_quotes
         stocks = db.query(Stock).filter(Stock.is_active == True).all()
-        for s in stocks:
-            price = get_current_price(s.code)
-            if price > 0:
-                s.current_price = price
-                if price > s.high_price:
-                    s.high_price = price
-        db.commit()
+        update_quotes(db, stocks)
         print(f"[로그인] 현재가 갱신 완료 ({len(stocks)}개 종목)")
     except Exception as e:
         print(f"[로그인] 현재가 갱신 실패: {e}")

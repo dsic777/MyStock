@@ -5,7 +5,10 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.core.database import engine, Base
 from app.api import accounts, stocks, settings, sell_history, auth, alerts, ai, demo, market, chart
+from app.services.trailing_stop import refresh_highs_job
 from seed import run_seed
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 import os
 
 
@@ -13,7 +16,13 @@ import os
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     run_seed()
+    # 고점가 자동 갱신 — 시작할 때 1번 + 장중(평일 09:00~15:30) 10분마다
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(refresh_highs_job, "date", run_date=datetime.now(), kwargs={"force": True})
+    scheduler.add_job(refresh_highs_job, "interval", minutes=10)
+    scheduler.start()
     yield
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
