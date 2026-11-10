@@ -116,10 +116,14 @@ def create_stock(data: StockCreate, db: Session = Depends(get_db)):
 
 @router.put("/{stock_id}", response_model=dict)
 def update_stock(stock_id: int, data: StockUpdate, db: Session = Depends(get_db)):
-    """종목 정보 수정"""
+    """종목 정보 수정 — 수량 0 이면 종목을 지운다"""
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if not stock:
         raise HTTPException(status_code=404, detail="종목을 찾을 수 없습니다")
+    if data.quantity == 0:
+        db.delete(stock)
+        db.commit()
+        return {"message": "수량 0 — 종목을 지웠습니다"}
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(stock, field, value)
     db.commit()

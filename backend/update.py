@@ -1,9 +1,8 @@
 """
-데모용 초기 데이터 생성 (오라클 테스트모드)
-- 앱 시작 시 호출 (main.py lifespan)
-- 실제 거래가 스냅샷 고정: 매입가/전일가(전영업일 종가)/현재가
-- 현재가는 price_fetcher.DEMO_PRICES 에서 (스케줄러/로그인 갱신에도 고정 유지)
-- 이미 데이터가 있으면 건너뜀 (중복 방지)
+보유종목 처음 만들기 (오라클 테스트모드)
+- 앱 시작 시 호출 (main.py lifespan) — DB 가 비어 있을 때만 아래 목록으로 만든다
+- 그 뒤 수량은 화면 🔢 수량조정에서 고친다 (0 이면 종목이 지워짐)
+- 고점가는 시작 직후 · 장중 10분마다 trailing_stop.refresh_highs 가 지난주 금요일부터 최고가로 맞춘다
 """
 from app.core.database import SessionLocal
 from app.models.models import Account, Stock, Settings

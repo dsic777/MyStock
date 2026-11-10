@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Settings from './Settings'
+import Quantity from './Quantity'
 import AlertDetail from './AlertDetail'
 import AlertList from './AlertList'
 import { authFetch, removeToken, getToken, API_PREFIX } from '../utils/auth'
@@ -312,6 +313,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showQuantity, setShowQuantity] = useState(false)
 
   const [audioUnlocked, setAudioUnlocked] = useState(false)
   const audioUnlockedRef = useRef(false)
@@ -342,11 +344,6 @@ export default function Dashboard() {
     }
   }
 
-  // 초기화 — 확인창 없이 즉시 9종목 리셋 후 새로고침
-  const handleDemoReset = async () => {
-    const res = await authFetch('/api/demo/reset', { method: 'POST' })
-    if (res.ok) fetchStocks()
-  }
 
   // SSE 알림 수신
   useEffect(() => {
@@ -452,10 +449,10 @@ export default function Dashboard() {
             flex: 1, background: '#555', color: '#fff', border: 'none',
             borderRadius: 7, padding: '12px 4px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
           }}>⚙️ 설정</button>
-          <button onClick={handleDemoReset} style={{
+          <button onClick={() => setShowQuantity(true)} style={{
             flex: 1, background: '#e65100', color: '#fff', border: 'none',
             borderRadius: 7, padding: '12px 2px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
-          }}>🔁 초기화</button>
+          }}>🔢 수량조정</button>
           <button onClick={handleLogout} style={{
             flex: 1, background: '#888', color: '#fff', border: 'none',
             borderRadius: 7, padding: '12px 4px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
@@ -557,6 +554,9 @@ export default function Dashboard() {
 
       {/* 설정 모달 */}
       {showSettings && <Settings onClose={() => { setShowSettings(false); fetchStocks() }} />}
+
+      {/* 수량조정 모달 */}
+      {showQuantity && <Quantity stocks={stocks} onChanged={fetchStocks} onClose={() => setShowQuantity(false)} />}
 
       {/* 알림 팝업 */}
       {pendingAlerts.length === 1 && !selectedAlert && (

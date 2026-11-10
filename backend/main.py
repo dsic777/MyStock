@@ -4,9 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.core.database import engine, Base
-from app.api import accounts, stocks, settings, sell_history, auth, alerts, ai, demo, market, chart
+from app.api import accounts, stocks, settings, sell_history, auth, alerts, ai, market, chart
 from app.services.trailing_stop import refresh_highs_job
-from seed import run_seed
+from update import run_seed
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import os
@@ -47,7 +47,6 @@ app.include_router(settings.router, prefix="/api")
 app.include_router(sell_history.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
-app.include_router(demo.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
 app.include_router(chart.router, prefix="/api")
 
