@@ -29,7 +29,6 @@ DEMO_STOCKS = [
     {"name": "한미반도체",         "code": "042700", "stock_type": "주식", "quantity": 10, "buy_price": 298250, "prev_close": 239500},
     {"name": "리노공업",           "code": "058470", "stock_type": "주식", "quantity": 7,  "buy_price": 76400,  "prev_close": 71500},
     {"name": "에코프로",           "code": "086520", "stock_type": "주식", "quantity": 2,  "buy_price": 95000,  "prev_close": 79600},
-    {"name": "알테오젠",           "code": "196170", "stock_type": "주식", "quantity": 2,  "buy_price": 408500, "prev_close": 276500},
     {"name": "TIGER나스닥100 ISA", "code": "133690", "stock_type": "ETF",  "quantity": 32, "buy_price": 158480, "prev_close": 193610},
 ]
 
